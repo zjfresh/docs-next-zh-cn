@@ -136,9 +136,9 @@ return h('h1', {}, this.blogTitle)
 ```js
 // @returns {VNode}
 h(
-  // {String | Object | Function | null} tag
-  // 一个 HTML 标签名、一个组件、一个异步组件，或者 null。
-  // 使用 null 将会渲染一个注释。
+  // {String | Object | Function} tag
+  // 一个 HTML 标签名、一个组件、一个异步组件、或
+  // 一个函数式组件。
   //
   // 必需的。
   'div',
@@ -352,7 +352,7 @@ render() {
 
 实例:
 
-```javascript
+```js
 render() {
   return h('input', {
     onClickCapture: this.doThisInCapturingMode,
@@ -549,6 +549,47 @@ render () {
 
 [`resolveDirective`](/api/global-api.html#resolvedirective) 是模板内部用来解析指令名称的同一个函数。只有当你还没有直接访问指令的定义对象时，才需要这样做。
 
+### 内置组件
+
+诸如 `<keep-alive>`、`<transition>`、`<transition-group>` 和 `<teleport>` 等[内置组件](/api/built-in-components.html)默认并没有被全局注册。这使得打包工具可以 tree-shake，因此这些组件只会在被用到的时候被引入构建。不过这也意味着我们无法通过 `resolveComponent` 或 `resolveDynamicComponent` 访问它们。
+
+在模板中这些组件会被特殊处理，即在它们被用到的时候自动导入。当我们编写自己的 `render` 函数时，需要自行导入它们：
+
+```js
+const { h, KeepAlive, Teleport, Transition, TransitionGroup } = Vue
+// ...
+render () {
+  return h(Transition, { mode: 'out-in' }, /* ... */)
+}
+```
+
+## 渲染函数的返回值
+
+在我们目前看过的所有示例中，`render` 函数返回的是单个根 VNode。但其实也有别的选项。
+
+返回一个字符串时会创建一个文本 VNode，而不被包裹任何元素：
+
+```js
+render() {
+  return 'Hello world!'
+}
+```
+
+我们也可以返回一个子元素数组，而不把它们包裹在一个根结点里。这会创建一个片段 (fragment)：
+
+```js
+// 相当于模板 `Hello<br>world!`
+render() {
+  return [
+    'Hello',
+    h('br'),
+    'world!'
+  ]
+}
+```
+
+可能是因为数据依然在加载中的关系，组件不需要渲染，这时它可以返回 `null`。这样我们在 DOM 中会渲染一个注释节点。
+
 ## JSX
 
 如果你写了很多渲染函数，可能会觉得下面这样的代码写起来很痛苦：
@@ -591,13 +632,11 @@ app.mount('#demo')
 
 有关 JSX 如何映射到 JavaScript 的更多信息，请参阅[使用文档](https://github.com/vuejs/jsx-next#installation) 。
 
-<!-- TODO： translation-->
-
 ## 函数式组件
 
-Functional components are an alternative form of component that don't have any state of their own. They are rendered without creating a component instance, bypassing the usual component lifecycle.
+函数式组件是自身没有任何状态的组件的另一种形式。它们在渲染过程中不会创建组件实例，并跳过常规的组件生命周期。
 
-To create a functional component we use a plain function, rather than an options object. The function is effectively the `render` function for the component. As there is no `this` reference for a functional component, Vue will pass in the `props` as the first argument:
+我们使用的是一个简单函数，而不是一个选项对象，来创建函数式组件。该函数实际上就是该组件的 `render` 函数。而因为函数式组件里没有 `this` 引用，Vue 会把 `props` 当作第一个参数传入：
 
 ```js
 const FunctionalComponent = (props, context) => {
@@ -605,18 +644,18 @@ const FunctionalComponent = (props, context) => {
 }
 ```
 
-The second argument, `context`, contains three properties: `attrs`, `emit`, and `slots`. These are equivalent to the instance properties [`$attrs`](/api/instance-properties.html#attrs), [`$emit`](/api/instance-methods.html#emit), and [`$slots`](/api/instance-properties.html#slots) respectively.
+第二个参数 `context` 包含三个 property：`attrs`、`emit` 和 `slots`。它们分别相当于实例的 [`$attrs`](/api/instance-properties.html#attrs)、[`$emit`](/api/instance-methods.html#emit) 和 [`$slots`](/api/instance-properties.html#slots) 这几个 property。
 
-Most of the usual configuration options for components are not available for functional components. However, it is possible to define [`props`](/api/options-data.html#props) and [`emits`](/api/options-data.html#emits) by adding them as properties:
+大多数常规组件的配置选项在函数式组件中都不可用。然而我们还是可以把 [`props`](/api/options-data.html#props) 和 [`emits`](/api/options-data.html#emits) 作为 property 加入，以达到定义它们的目的：
 
 ```js
 FunctionalComponent.props = ['value']
 FunctionalComponent.emits = ['click']
 ```
 
-If the `props` option is not specified, then the `props` object passed to the function will contain all attributes, the same as `attrs`. The prop names will not be normalized to camelCase unless the `props` option is specified.
+如果这个 `props` 选项没有被定义，那么被传入函数的 `props` 对象就会像 `attrs` 一样会包含所有 attribute。而如果 `props` 选项没有被定制，每个 prop 的名字都会基于驼峰命名法被一般化处理。
 
-Functional components can be registered and consumed just like normal components. If you pass a function as the first argument to `h`, it will be treated as a functional component.
+函数式组件可以像普通组件一样被注册和消费。如果你将一个函数作为第一个参数传入 `h`，它将会被当作一个函数式组件来对待。
 
 ## 模板编译
 

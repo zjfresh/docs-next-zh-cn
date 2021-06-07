@@ -96,7 +96,7 @@ render() {
 
 - **详细：**
 
-  HTML 标签名、组件或异步组件。使用返回 null 的函数将渲染一个注释。此参数是必需的。
+  HTML 标签名、组件、异步组件或函数式组件。使用返回 null 的函数将渲染一个注释。此参数是必需的。
 
 #### props
 
@@ -524,3 +524,20 @@ export default {
 - **详细：**
 
   CSS 模块的名称。默认为 `'$style'`。
+
+## version
+
+以字符串形式提供已安装的 Vue 的版本号。
+
+```js
+const version = Number(Vue.version.split('.')[0])
+if (version === 3) {
+  // Vue 3
+} else if (version === 2) {
+  // Vue 2
+} else {
+  // 不支持的 Vue 的版本
+}
+```
+
+**参考：**[应用 API - version](/api/application-api.html#version)

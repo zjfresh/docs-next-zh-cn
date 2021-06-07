@@ -6,7 +6,7 @@
 
 ## 参数
 
-使用 `setup` 函数时，它将接受两个参数：
+使用 `setup` 函数时，它将接收两个参数：
 
 1. `props`
 2. `context`
@@ -31,10 +31,10 @@ export default {
 ```
 
 :::warning
-但是，因为 `props` 是响应式的，你**不能使用 ES6 解构**，因为它会消除 prop 的响应性。
+但是，因为 `props` 是响应式的，你**不能使用 ES6 解构**，它会消除 prop 的响应性。
 :::
 
-如果需要解构 prop，可以通过使用 `setup` 函数中的 [`toRefs`](reactivity-fundamentals.html#响应式状态解构) 来完成此操作：
+如果需要解构 prop，可以在 `setup` 函数中使用 [`toRefs`](reactivity-fundamentals.html#响应式状态解构) 函数来完成此操作：
 
 ```js
 // MyBook.vue
@@ -92,7 +92,7 @@ export default {
 }
 ```
 
-`attrs` 和 `slots` 是有状态的对象，它们总是会随组件本身的更新而更新。这意味着你应该避免对它们进行解构，并始终以 `attrs.x` 或 `slots.x` 的方式引用 property。请注意，与 `props` 不同，`attrs` 和 ` slots` 是**非**响应式的。如果你打算根据 `attrs` 或 `slots` 更改应用副作用，那么应该在 `onUpdated` 生命周期钩子中执行此操作。
+`attrs` 和 `slots` 是有状态的对象，它们总是会随组件本身的更新而更新。这意味着你应该避免对它们进行解构，并始终以 `attrs.x` 或 `slots.x` 的方式引用 property。请注意，与 `props` 不同，`attrs` 和 `slots` 是**非**响应式的。如果你打算根据 `attrs` 或 `slots` 更改应用副作用，那么应该在 `onUpdated` 生命周期钩子中执行此操作。
 
 ## 访问组件的 property
 
@@ -111,19 +111,22 @@ export default {
 
 ## 结合模板使用
 
-如果 `setup` 返回一个对象，则可以在组件的模板中像传递给 `setup` 的 `props` property 一样访问该对象的 property：
+如果 `setup` 返回一个对象，那么该对象的 property 以及传递给 `setup` 的 `props` 参数中的 property 就都可以在模板中访问到：
 
 ```vue-html
 <!-- MyBook.vue -->
 <template>
-  <div>{{ readersNumber }} {{ book.title }}</div>
+  <div>{{ collectionName }}: {{ readersNumber }} {{ book.title }}</div>
 </template>
 
 <script>
   import { ref, reactive } from 'vue'
 
   export default {
-    setup() {
+    props: {
+      collectionName: String
+    },
+    setup(props) {
       const readersNumber = ref(0)
       const book = reactive({ title: 'Vue 3 Guide' })
 
@@ -137,7 +140,7 @@ export default {
 </script>
 ```
 
-注意，从 `setup` 返回的 [refs](../api/refs-api.html#ref) 在模板中访问时是[被自动浅解包](/guide/reactivity-fundamentals.html#ref-展开)的，因此不应在模板中使用 `.value`。
+注意，从 `setup` 返回的 [refs](../api/refs-api.html#ref) 在模板中访问时是[被自动浅解包](/guide/reactivity-fundamentals.html#ref-解包)的，因此不应在模板中使用 `.value`。
 
 ## 使用渲染函数
 
@@ -160,4 +163,4 @@ export default {
 
 ## 使用 `this`
 
-**在 `setup()` 内部，`this` 不会是该活跃实例的引用**，因为 `setup()` 是在解析其它组件选项之前被调用的，所以 `setup()` 内部的 `this` 的行为与其它选项中的 `this` 完全不同。这在和其它选项式 API 一起使用 `setup()` 时可能会导致混淆。
+**在 `setup()` 内部，`this` 不是该活跃实例的引用**，因为 `setup()` 是在解析其它组件选项之前被调用的，所以 `setup()` 内部的 `this` 的行为与其它选项中的 `this` 完全不同。这使得 `setup()`  在和其它选项式 API 一起使用时可能会导致混淆。

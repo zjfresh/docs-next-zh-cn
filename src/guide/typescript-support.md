@@ -152,6 +152,49 @@ const Component = defineComponent({
 })
 ```
 
+### 为 `globalProperties` 扩充类型
+
+Vue 3 提供了一个 [`globalProperties` 对象](../api/application-config.html#globalproperties)，用来添加可以被任意组件实例访问的全局 property。例如一个[插件](./plugins.html#编写插件)想要注入一个共享全局对象或函数。
+
+```ts
+// 用户定义
+import axios from 'axios'
+const app = Vue.createApp({})
+app.config.globalProperties.$http = axios
+// 验证数据的插件
+export default {
+  install(app, options) {
+    app.config.globalProperties.$validate = (data: object, rule: object) => {
+      // 检查对象是否合规
+    }
+  }
+}
+```
+
+为了告诉 TypeScript 这些新 property，我们可以使用[模块扩充 (module augmentation)](https://www.typescriptlang.org/docs/handbook/declaration-merging.html#module-augmentation)。
+
+在上述示例中，我们可以添加以下类型声明：
+
+```ts
+import axios from 'axios'
+declare module '@vue/runtime-core' {
+  export interface ComponentCustomProperties {
+    $http: typeof axios
+    $validate: (data: object, rule: object) => boolean
+  }
+}
+```
+
+我们可以把这些类型声明放在同一个文件里，或一个项目级别的 `*.d.ts` 文件 (例如在 TypeScript 会自动加载的 `src/typings` 文件夹中)。对于库/插件作者来说，这个文件应该被定义在 `package.json` 的 `types` property 里。
+
+::: warning 确认声明文件是一个 TypeScript 模块
+为了利用好模块扩充，你需要确认你的文件中至少有一个顶级的 `import` 或 `export`，哪怕只是一个 `export {}`。
+
+[在 TypeScript 中](https://www.typescriptlang.org/docs/handbook/modules.html)，任何包含一个顶级 `import` 或 `export` 的文件都被视为一个“模块”。如果类型声明在模块之外，该声明会覆盖而不是扩充原本的类型。
+:::
+
+关于 `ComponentCustomProperties` 类型的更多信息，请参阅其[在 `@vue/runtime-core` 中的定义](https://github.com/vuejs/vue-next/blob/2587f36fe311359e2e34f40e8e47d2eebfab7f42/packages/runtime-core/src/componentOptions.ts#L64-L80)及[其 TypeScript 测试用例](https://github.com/vuejs/vue-next/blob/master/test-dts/componentTypeExtensions.test-d.tsx)学习更多。
+
 ### 注解返回类型
 
 由于 Vue 声明文件的循环特性，TypeScript 可能难以推断 computed 的类型。因此，你可能需要注解计算属性的返回类型。
@@ -169,17 +212,17 @@ const Component = defineComponent({
     // 需要注解
     greeting(): string {
       return this.message + '!'
-    }
+    },
 
     // 在使用 setter 进行计算时，需要对 getter 进行注解
     greetingUppercased: {
       get(): string {
-        return this.greeting.toUpperCase();
+        return this.greeting.toUpperCase()
       },
       set(newValue: string) {
-        this.message = newValue.toUpperCase();
-      },
-    },
+        this.message = newValue.toUpperCase()
+      }
+    }
   }
 })
 ```
@@ -213,7 +256,7 @@ const Component = defineComponent({
 ```
 
 ::: warning
-由于 TypeScript 中的[设计限制](https://github.com/microsoft/TypeScript/issues/38845)，当它涉及到为了对函数表达式进行类型推理，你必须注意对象和数组的 `validators` 和 `default` 值：
+由于 TypeScript 中的[设计限制](https://github.com/microsoft/TypeScript/issues/38845)，当它涉及到为了对函数表达式进行类型推理，你必须注意对象和数组的 `validator` 和 `default` 值：
 :::
 
 ```ts
@@ -322,6 +365,70 @@ year.value = 2020 // ok!
 :::tip
 如果泛型的类型未知，建议将 `ref` 转换为 `Ref<T>`。
 :::
+
+### 为模板引用定义类型
+
+有时你可能需要为一个子组件标注一个模板引用，以调用其公共方法。例如我们有一个 `MyModal` 子组件，它有一个打开模态的方法：
+
+```ts
+import { defineComponent, ref } from 'vue'
+const MyModal = defineComponent({
+  setup() {
+    const isContentShown = ref(false)
+    const open = () => (isContentShown.value = true)
+    return {
+      isContentShown,
+      open
+    }
+  }
+})
+```
+
+我们希望从其父组件的一个模板引用调用这个方法：
+
+```ts
+import { defineComponent, ref } from 'vue'
+const MyModal = defineComponent({
+  setup() {
+    const isContentShown = ref(false)
+    const open = () => (isContentShown.value = true)
+    return {
+      isContentShown,
+      open
+    }
+  }
+})
+const app = defineComponent({
+  components: {
+    MyModal
+  },
+  template: `
+    <button @click="openModal">Open from parent</button>
+    <my-modal ref="modal" />
+  `,
+  setup() {
+    const modal = ref()
+    const openModal = () => {
+      modal.value.open()
+    }
+    return { modal, openModal }
+  }
+})
+```
+
+它可以工作，但是没有关于 `MyModal` 及其可用方法的类型信息。为了解决这个问题，你应该在创建引用时使用 `InstanceType`：
+
+```ts
+setup() {
+  const modal = ref<InstanceType<typeof MyModal>>()
+  const openModal = () => {
+    modal.value?.open()
+  }
+  return { modal, openModal }
+}
+```
+
+请注意你还需要使用[可选链操作符](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Operators/Optional_chaining)或其它方式来确认 `modal.value` 不是 undefined。
 
 ### 类型声明 `reactive`
 

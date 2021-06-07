@@ -1,5 +1,21 @@
 # 内置组件
 
+内置组件可以直接在模板中使用，而不需注册。
+
+`<keep-alive>`、`<transition>`、`<transition-group>` 和 `<teleport>` 组件都可以被打包工具 tree-shake。所以它们只会在被使用的时候被引入。如果你需要直接访问它们，也可以将它们显性导入。
+
+```js
+// Vue 的 CDN 构建
+const { KeepAlive, Teleport, Transition, TransitionGroup } = Vue
+```
+
+```js
+// Vue 的 ESM 构建
+import { KeepAlive, Teleport, Transition, TransitionGroup } from 'vue'
+```
+
+`<component>` 和 `<slot>` 是模板语法中组件形式的特性。它们不是真正的组件且无法像上述组件那样被导入。
+
 ## component
 
 - **Props：**
@@ -23,6 +39,25 @@
   <!-- 可以用来渲染原生 HTML 元素 -->
   <component :is="href ? 'a' : 'span'"></component>
   ```
+
+  内置组件 `KeepAlive`、`Transition`、`TransitionGroup` 和 `Teleport` 都可以被传递给 `is`，但是如果你想要通过名字传入它们，就必须注册。例如：
+
+  ```js
+  const { Transition, TransitionGroup } = Vue
+  const Component = {
+    components: {
+      Transition,
+      TransitionGroup
+    },
+    template: `
+      <component :is="isGroup ? 'TransitionGroup' : 'Transition'">
+        ...
+      </component>
+    `
+  }
+  ```
+
+  如果你传递组件本身到 `is` 而不是其名字，则不需要注册。
 
 -  **参考：**[动态组件](../guide/component-dynamic-async.html)
 
